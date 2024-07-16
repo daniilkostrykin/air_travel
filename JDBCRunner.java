@@ -24,25 +24,23 @@ public class JDBCRunner {
 
         // попытка открыть соединение с базой данных, которое java-закроет перед выходом из try-with-resources
         try (Connection connection = DriverManager.getConnection(DATABASE_URL, USER_NAME, DATABASE_PASS)) {
-           /*addClient(connection, "Даня2", 19999999, "2005-04-28", "М", "РФ", "my mail");
-            correctClient(connection, 16, "daniilkostrykin1@gmail..com");
-            removeClient(connection, 10);
-            insertSeats(connection, 2);
-            buyTicket(connection, 10, "2024-08-15 10:00:00", "2024-08-15 12:00:00", "qw", "wq", 10, 9999, "2");
-            changeTicket(connection, 16, 10, "2023-08-15 10:00:00", "2023-08-15 15:00:00", "VNK", "KLN", 15, 5000, "1");
-            returnTicket(connection, 19);
-            addLuggage(connection, 20);
-            changeDepartureAirport(connection, 21, "VNK");
-            changeArrivalAirport(connection, 21, "C");
-            delayFLight(connection, "2", "2024-08-15 10:00:00");
-            cancelFlight(connection, "2");
+           addClient(connection, "Даня2", 19999999, "2005-04-28", "М", "РФ", "my mail");
+            correctClient(connection, 1, "daniilkostrykin1@gmail..com");
+         //   removeClient(connection, 1);
+            insertSeats(connection, 1);
+            buyTicket(connection, 1, "2024-08-15 10:00:00", "2024-08-15 12:00:00", "qw", "wq", 10, 9999, "1");
+            changeTicket(connection, 1, 1, "2023-08-15 10:00:00", "2023-08-15 15:00:00", "VNK", "KLN", 15, 5000, "1");
+         //   returnTicket(connection,51 );
+            addLuggage(connection, 1);
+            changeDepartureAirport(connection, 1, "VNK");
+            changeArrivalAirport(connection, 1, "C");
+            delayFLight(connection, "1", "2024-08-15 10:00:00");
+            cancelFlight(connection, "1");
             getClients(connection);
             System.out.println("ээээ");
             getTickets(connection);
             System.out.println("ээээ");
-            getClientNamed(connection, "Даня", true);
             System.out.println("ээээ");
-            getClientNamed(connection, "Даня", false);
             System.out.println("ээээ");
             getClientTickets(connection, "Даня");
             System.out.println("ээээ");
@@ -51,8 +49,8 @@ public class JDBCRunner {
             getFlightsFromAirport(connection, "VNK");
             System.out.println("ээээ");
             getCheapestTop(connection, 10);
-            getTicketById(connection, 28);
-            getClientNamed(connection, "Даня");*/
+            getTicketById(connection, 1);
+            getClientNamed(connection, "Даня");
         } catch (SQLException e) {
             // При открытии соединения, выполнении запросов могут возникать различные ошибки
             // Согласно стандарту SQL:2008 в ситуациях нарушения ограничений уникальности (в т.ч. дублирования данных) возникают ошибки соответствующие статусу (или дочерние ему): SQLState 23000 - Integrity Constraint Violation
@@ -81,7 +79,7 @@ public class JDBCRunner {
     }
 
     private static void addClient(Connection connection, String full_name, long passport_series, String birth_date, String gender, String citizenship, String email) throws SQLException {
-        if (full_name == null || full_name.isBlank() || passport_series < 0 || birth_date.isBlank() || gender.isBlank() || citizenship.isBlank() || email.isBlank())
+        if (!(gender.equals("М") || gender.equals("Ж")) || full_name == null || full_name.isBlank() || passport_series < 0 || birth_date.isBlank() || gender.isBlank() || citizenship.isBlank() || email.isBlank())
             return;
 
         java.sql.Date sqlBirthDate = java.sql.Date.valueOf(birth_date);
@@ -130,6 +128,7 @@ public class JDBCRunner {
     }
 
     private static void insertSeats(Connection connection, int flight) throws SQLException {
+        if (flight < 0) return;
         try (PreparedStatement statement = connection.prepareStatement("INSERT INTO seat (seat, flight) VALUES (?, ?)")) {
             for (int row = 1; row <= 32; row++) {
                 for (char column = 'A'; column <= 'E'; column++) {
@@ -145,7 +144,8 @@ public class JDBCRunner {
 
     private static void buyTicket(Connection connection, int client_id, String departure_time, String arrival_time, String departure_airport, String arrival_airport, int gate, long price, String flight) throws SQLException {
 
-        if (client_id < 0 || price < 0 || departure_time.isBlank() || departure_airport.length() > 3 || arrival_airport.length() > 3 || arrival_time.isBlank() || departure_airport.isBlank() || arrival_airport.isBlank() || gate < 0) {
+        if (!departure_airport.matches("[A-Z]{3}") || !arrival_airport.matches("[A-Z]{3}") || client_id < 0 || price < 0 ||
+                departure_time.isBlank() || departure_airport.length() > 3 || arrival_airport.length() > 3 || arrival_time.isBlank() || departure_airport.isBlank() || arrival_airport.isBlank() || gate < 0 || flight.isBlank()) {
             return;
         }
 
@@ -195,7 +195,11 @@ public class JDBCRunner {
     }
 
     private static void changeTicket(Connection connection, int ticket_id, int client_id, String departure_time, String arrival_time, String departure_airport, String arrival_airport, int gate, long price, String flight) throws SQLException {
-
+        if (!departure_airport.matches("[A-Z]{3}") || !arrival_airport.matches("[A-Z]{3}") || ticket_id < 0
+                || client_id < 0 || price < 0 || departure_time.isBlank() || departure_airport.length() > 3 || arrival_airport.length() > 3
+                || arrival_time.isBlank() || departure_airport.isBlank() || arrival_airport.isBlank() || gate < 0 || flight.isBlank()) {
+            return;
+        }
         PreparedStatement statement = connection.prepareStatement("DELETE FROM ticket WHERE id = ?;");
         PreparedStatement statement1 = connection.prepareStatement("UPDATE seat SET ticket_number_id = ? WHERE ticket_number_id = ?");
         statement.setInt(1, ticket_id);
@@ -208,6 +212,7 @@ public class JDBCRunner {
     }
 
     private static void returnTicket(Connection connection, int ticket_id) throws SQLException {
+        if (ticket_id < 0) return;
         PreparedStatement statement = connection.prepareStatement("DELETE FROM ticket WHERE id = ?;\n");
         statement.setInt(1, ticket_id);
         PreparedStatement statement1 = connection.prepareStatement("UPDATE seat SET ticket_number_id = NULL WHERE ticket_number_id = ?");
@@ -217,6 +222,7 @@ public class JDBCRunner {
     }
 
     private static void addLuggage(Connection connection, int ticket_id) throws SQLException {
+        if (ticket_id < 0) return;
         PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET luggage = 'yes' WHERE id = ?");
         statement.setInt(1, ticket_id);
         statement.executeUpdate();
@@ -224,7 +230,7 @@ public class JDBCRunner {
     }
 
     private static void changeDepartureAirport(Connection connection, int ticket_id, String departure_airport) throws SQLException {
-        if (departure_airport.length() > 3) return;
+        if (ticket_id < 0 || !departure_airport.matches("[A-Z]{3}")) return;
         PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET departure_airport = ? WHERE id = ?");
         statement.setString(1, departure_airport);
         statement.setInt(2, ticket_id);
@@ -233,7 +239,7 @@ public class JDBCRunner {
     }
 
     private static void changeArrivalAirport(Connection connection, int ticket_id, String arrival_airport) throws SQLException {
-        if (arrival_airport.length() > 3) return;
+        if (!arrival_airport.matches("[A-Z]{3}")) return;
         PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET arrival_airport = ? WHERE id = ?");
         statement.setString(1, arrival_airport);
         statement.setInt(2, ticket_id);
@@ -242,6 +248,7 @@ public class JDBCRunner {
     }
 
     private static void delayFLight(Connection connection, String flight, String departure_time) throws SQLException {
+        if (departure_time.isBlank()) return;
         Timestamp Sdeparture_time = Timestamp.valueOf(departure_time);
         PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET flight_status = 'DELAYED', departure_time = ? WHERE flight = ?");
         statement.setTimestamp(1, Sdeparture_time);
@@ -252,6 +259,7 @@ public class JDBCRunner {
     }
 
     private static void cancelFlight(Connection connection, String flight) throws SQLException {
+        if (flight.isBlank()) return;
         PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET flight_status = 'CANCELLED' WHERE flight = ?");
         statement.setString(1, flight);
         statement.executeUpdate();
@@ -349,6 +357,8 @@ public class JDBCRunner {
     }
 
     private static void getFlightsForPeriod(Connection connection, Timestamp departure_time_start, Timestamp departure_time_finish) throws SQLException {
+        if (departure_time_start == null || departure_time_finish == null || departure_time_finish.before(departure_time_start))
+            return;
         PreparedStatement statement = connection.prepareStatement("SELECT flight FROM ticket WHERE departure_time BETWEEN ? AND ?");
         statement.setTimestamp(1, departure_time_start);
         statement.setTimestamp(2, departure_time_finish);
@@ -363,6 +373,7 @@ public class JDBCRunner {
     }
 
     private static void getFlightsFromAirport(Connection connection, String airport) throws SQLException {
+        if (!airport.matches("[A-Z]{3}") || airport.isBlank()) return;
         PreparedStatement statement = connection.prepareStatement("SELECT flight FROM ticket WHERE departure_airport = ?");
         statement.setString(1, airport);
         ResultSet rs = statement.executeQuery();
@@ -376,6 +387,7 @@ public class JDBCRunner {
     }
 
     private static void getCheapestTop(Connection connection, int digit) throws SQLException {
+        if (digit <= 0) return;
         PreparedStatement statement = connection.prepareStatement("SELECT * FROM public.ticket ORDER BY price ASC LIMIT ?");
         statement.setInt(1, digit);
         ResultSet rs = statement.executeQuery();
@@ -386,6 +398,7 @@ public class JDBCRunner {
     }
 
     private static void getTicketById(Connection connection, int ticket_id) throws SQLException {
+        if (ticket_id <= 0) return;
         String columnName0 = "id", columnName1 = "client_id", columnName2 = "flight", columnName3 = "departure_time", columnName4 = "arrival_time", columnName5 = "departure_airport", columnName6 = "arrival_airport", columnName7 = "gate", columnName8 = "price", columnName9 = "seat", columnName10 = "luggage", columnName11 = "flight_status";
 
         int param0, param1, param7;
