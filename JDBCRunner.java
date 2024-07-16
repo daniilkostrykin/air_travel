@@ -24,8 +24,8 @@ public class JDBCRunner {
 
         // попытка открыть соединение с базой данных, которое java-закроет перед выходом из try-with-resources
         try (Connection connection = DriverManager.getConnection(DATABASE_URL, USER_NAME, DATABASE_PASS)) {
-           addClient(connection, "Даня2", 19999999, "2005-04-28", "М", "РФ", "my mail");
-            correctClient(connection, 1, "daniilkostrykin1@gmail..com");
+            //   addClient(connection, "Даня2", 19999999, "2005-04-28", "М", "РФ", "my mail");
+           /* correctClient(connection, 1, "daniilkostrykin1@gmail..com");
          //   removeClient(connection, 1);
             insertSeats(connection, 1);
             buyTicket(connection, 1, "2024-08-15 10:00:00", "2024-08-15 12:00:00", "qw", "wq", 10, 9999, "1");
@@ -41,16 +41,18 @@ public class JDBCRunner {
             getTickets(connection);
             System.out.println("ээээ");
             System.out.println("ээээ");
-            System.out.println("ээээ");
-            getClientTickets(connection, "Даня");
-            System.out.println("ээээ");
+            System.out.println("ээээ")*/
+            ;
+            getClientTickets(connection, "Даня2");
+           /* System.out.println("ээээ");
             getFlightsForPeriod(connection, Timestamp.valueOf("2023-08-15 10:00:00"), Timestamp.valueOf("2024-07-15 10:00:00"));
             System.out.println("ээээ");
             getFlightsFromAirport(connection, "VNK");
             System.out.println("ээээ");
             getCheapestTop(connection, 10);
             getTicketById(connection, 1);
-            getClientNamed(connection, "Даня");
+            getClientNamed(connection, "Даня2");*/
+
         } catch (SQLException e) {
             // При открытии соединения, выполнении запросов могут возникать различные ошибки
             // Согласно стандарту SQL:2008 в ситуациях нарушения ограничений уникальности (в т.ч. дублирования данных) возникают ошибки соответствующие статусу (или дочерние ему): SQLState 23000 - Integrity Constraint Violation
@@ -79,14 +81,14 @@ public class JDBCRunner {
     }
 
     private static void addClient(Connection connection, String full_name, long passport_series, String birth_date, String gender, String citizenship, String email) throws SQLException {
-        if (!(gender.equals("М") || gender.equals("Ж")) || full_name == null || full_name.isBlank() || passport_series < 0 || birth_date.isBlank() || gender.isBlank() || citizenship.isBlank() || email.isBlank())
+        if (!(gender.equals("М") || gender.equals("Ж")) || full_name == null || full_name.isBlank() || passport_series < 0 || birth_date.isBlank() || gender.isBlank() || citizenship.isBlank() || email.isBlank() || full_name.matches(".*\\d.*"))
             return;
 
         java.sql.Date sqlBirthDate = java.sql.Date.valueOf(birth_date);
         PreparedStatement statement = connection.prepareStatement("INSERT INTO client(full_name, passport_series, birth_date, gender, citizenship, email) VALUES (?, ?, ?, ?, ?, ?) returning id;", Statement.RETURN_GENERATED_KEYS);
 
         statement.setString(1, full_name);
-        statement.setLong(2, passport_series); // Использование setLong для bigint
+        statement.setLong(2, passport_series);
         statement.setDate(3, sqlBirthDate);
         statement.setString(4, gender);
         statement.setString(5, citizenship);
@@ -107,10 +109,10 @@ public class JDBCRunner {
         if (id < 0 || email.isBlank()) return;
 
         PreparedStatement statement = connection.prepareStatement("UPDATE client SET email=? WHERE id=?;");
-        statement.setString(1, email); // сначала что передаем
-        statement.setInt(2, id);   // затем по чему ищем
+        statement.setString(1, email);
+        statement.setInt(2, id);
 
-        int count = statement.executeUpdate();  // выполняем запрос на коррекцию и возвращаем количество измененных строк
+        int count = statement.executeUpdate();
 
         System.out.println("UPDATEd " + count + " client(s)");
         getClients(connection);
@@ -122,7 +124,6 @@ public class JDBCRunner {
         PreparedStatement statement = connection.prepareStatement("DELETE from client WHERE id=?;");
         statement.setInt(1, id);
 
-        // выполняем запрос на удаление и возвращаем количество измененных строк
         System.out.println("DELETEd " + statement.executeUpdate() + " client(s)");
         getClients(connection);
     }
@@ -132,7 +133,7 @@ public class JDBCRunner {
         try (PreparedStatement statement = connection.prepareStatement("INSERT INTO seat (seat, flight) VALUES (?, ?)")) {
             for (int row = 1; row <= 32; row++) {
                 for (char column = 'A'; column <= 'E'; column++) {
-                    String seat = row + String.valueOf(column);   // Формируем значение места, например, "1A"
+                    String seat = row + String.valueOf(column);
                     statement.setString(1, seat);
                     statement.setInt(2, flight);
                     statement.addBatch();
@@ -144,13 +145,12 @@ public class JDBCRunner {
 
     private static void buyTicket(Connection connection, int client_id, String departure_time, String arrival_time, String departure_airport, String arrival_airport, int gate, long price, String flight) throws SQLException {
 
-        if (!departure_airport.matches("[A-Z]{3}") || !arrival_airport.matches("[A-Z]{3}") || client_id < 0 || price < 0 ||
-                departure_time.isBlank() || departure_airport.length() > 3 || arrival_airport.length() > 3 || arrival_time.isBlank() || departure_airport.isBlank() || arrival_airport.isBlank() || gate < 0 || flight.isBlank()) {
+        if (!departure_airport.matches("[A-Z]{3}") || !arrival_airport.matches("[A-Z]{3}") || client_id < 0 || price < 0 || departure_time.isBlank() || departure_airport.length() > 3 || arrival_airport.length() > 3 || arrival_time.isBlank() || departure_airport.isBlank() || arrival_airport.isBlank() || gate < 0 || flight.isBlank()) {
             return;
         }
 
         // Найдем свободное место для рейса
-        PreparedStatement statement = connection.prepareStatement("SELECT id FROM seat WHERE flight = ? AND ticket_number_id IS NULL LIMIT 1");
+        PreparedStatement statement = connection.prepareStatement("SELECT id FROM seat WHERE flight = ? AND" + " ticket_number_id IS NULL LIMIT 1");
         statement.setString(1, flight);
 
         ResultSet rs = statement.executeQuery();
@@ -164,7 +164,7 @@ public class JDBCRunner {
         Timestamp Sdeparture_time = Timestamp.valueOf(departure_time);
         Timestamp Sarrival_time = Timestamp.valueOf(arrival_time);
         // Вставим запись о бронировании билета
-        PreparedStatement statement1 = connection.prepareStatement("INSERT INTO ticket(client_id, flight, departure_time, arrival_time, departure_airport, arrival_airport, gate, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+        PreparedStatement statement1 = connection.prepareStatement("INSERT INTO ticket(client_id, flight," + " departure_time, arrival_time, departure_airport, arrival_airport, gate, price) VALUES " + "(?, ?, ?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
         statement1.setInt(1, client_id);
         statement1.setString(2, flight);
         statement1.setTimestamp(3, Sdeparture_time);
@@ -179,7 +179,7 @@ public class JDBCRunner {
             if (generatedKeys.next()) {
                 int bookingId = generatedKeys.getInt(1);
                 // Обновим информацию о месте
-                PreparedStatement statement2 = connection.prepareStatement("UPDATE seat SET ticket_number_id = ? WHERE id = ?");
+                PreparedStatement statement2 = connection.prepareStatement("UPDATE seat SET ticket_number_id = ? " + "WHERE id = ?");
                 statement2.setInt(1, bookingId);
                 statement2.setInt(2, seatId);
                 statement2.executeUpdate();
@@ -189,15 +189,13 @@ public class JDBCRunner {
         } else {
             System.out.println("No tickets inserted");
         }
-        PreparedStatement statement3 = connection.prepareStatement("UPDATE ticket SET seat = s.seat FROM seat s WHERE s.ticket_number_id = ticket.id;");
+        PreparedStatement statement3 = connection.prepareStatement("UPDATE ticket SET seat = s.seat" + " FROM seat s WHERE s.ticket_number_id = ticket.id;");
         statement3.executeUpdate();
 
     }
 
     private static void changeTicket(Connection connection, int ticket_id, int client_id, String departure_time, String arrival_time, String departure_airport, String arrival_airport, int gate, long price, String flight) throws SQLException {
-        if (!departure_airport.matches("[A-Z]{3}") || !arrival_airport.matches("[A-Z]{3}") || ticket_id < 0
-                || client_id < 0 || price < 0 || departure_time.isBlank() || departure_airport.length() > 3 || arrival_airport.length() > 3
-                || arrival_time.isBlank() || departure_airport.isBlank() || arrival_airport.isBlank() || gate < 0 || flight.isBlank()) {
+        if (!departure_airport.matches("[A-Z]{3}") || !arrival_airport.matches("[A-Z]{3}") || ticket_id < 0 || client_id < 0 || price < 0 || departure_time.isBlank() || departure_airport.length() > 3 || arrival_airport.length() > 3 || arrival_time.isBlank() || departure_airport.isBlank() || arrival_airport.isBlank() || gate < 0 || flight.isBlank()) {
             return;
         }
         PreparedStatement statement = connection.prepareStatement("DELETE FROM ticket WHERE id = ?;");
@@ -215,7 +213,7 @@ public class JDBCRunner {
         if (ticket_id < 0) return;
         PreparedStatement statement = connection.prepareStatement("DELETE FROM ticket WHERE id = ?;\n");
         statement.setInt(1, ticket_id);
-        PreparedStatement statement1 = connection.prepareStatement("UPDATE seat SET ticket_number_id = NULL WHERE ticket_number_id = ?");
+        PreparedStatement statement1 = connection.prepareStatement("UPDATE seat SET ticket_number_id = NULL" + " WHERE ticket_number_id = ?");
         statement1.setInt(1, ticket_id);
         statement.executeUpdate();
         statement1.executeUpdate();
@@ -231,7 +229,7 @@ public class JDBCRunner {
 
     private static void changeDepartureAirport(Connection connection, int ticket_id, String departure_airport) throws SQLException {
         if (ticket_id < 0 || !departure_airport.matches("[A-Z]{3}")) return;
-        PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET departure_airport = ? WHERE id = ?");
+        PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET " + "departure_airport = ? WHERE id = ?");
         statement.setString(1, departure_airport);
         statement.setInt(2, ticket_id);
         statement.executeUpdate();
@@ -240,7 +238,7 @@ public class JDBCRunner {
 
     private static void changeArrivalAirport(Connection connection, int ticket_id, String arrival_airport) throws SQLException {
         if (!arrival_airport.matches("[A-Z]{3}")) return;
-        PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET arrival_airport = ? WHERE id = ?");
+        PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET arrival_airport = ?" + " WHERE id = ?");
         statement.setString(1, arrival_airport);
         statement.setInt(2, ticket_id);
         statement.executeUpdate();
@@ -250,7 +248,7 @@ public class JDBCRunner {
     private static void delayFLight(Connection connection, String flight, String departure_time) throws SQLException {
         if (departure_time.isBlank()) return;
         Timestamp Sdeparture_time = Timestamp.valueOf(departure_time);
-        PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET flight_status = 'DELAYED', departure_time = ? WHERE flight = ?");
+        PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET flight_status = 'DELAYED', " + "departure_time = ? WHERE flight = ?");
         statement.setTimestamp(1, Sdeparture_time);
         statement.setString(2, flight);
         statement.executeUpdate();
@@ -260,31 +258,29 @@ public class JDBCRunner {
 
     private static void cancelFlight(Connection connection, String flight) throws SQLException {
         if (flight.isBlank()) return;
-        PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET flight_status = 'CANCELLED' WHERE flight = ?");
+        PreparedStatement statement = connection.prepareStatement("UPDATE ticket SET flight_status = 'CANCELLED'" + " WHERE flight = ?");
         statement.setString(1, flight);
         statement.executeUpdate();
         System.out.println("Cancelled flight for ID" + flight);
     }
 
     private static void getClients(Connection connection) throws SQLException {
-        // имена столбцов
         String columnName0 = "id", columnName1 = "full_name", columnName2 = "passport_series", columnName3 = "birth_date", columnName4 = "gender", columnName5 = "citizenship", columnName6 = "email";
-        // значения ячеек
         int param0;
         long param2;
         String param1, param3, param4, param5, param6;
 
-        Statement statement = connection.createStatement(); // создаем оператор для простого запроса (без параметров)
-        ResultSet rs = statement.executeQuery("SELECT * FROM client;"); // выполняем запрос на поиск и получаем список ответов
+        Statement statement = connection.createStatement();
+        ResultSet rs = statement.executeQuery("SELECT * FROM client;");
         System.out.println(columnName0 + " | " + columnName1 + " | " + columnName2 + " | " + columnName3 + " | " + columnName4 + " | " + columnName5 + " | " + columnName6);
-        while (rs.next()) { // пока есть данные, продвигаться по ним
+        while (rs.next()) {
             param6 = rs.getString(columnName6);
             param5 = rs.getString(columnName5);
             param4 = rs.getString(columnName4);
             param3 = rs.getString(columnName3);
             param2 = rs.getLong(columnName2);
             param1 = rs.getString(columnName1);
-            param0 = rs.getInt(columnName0); // если точно уверены в типе данных ячейки, можно его сразу преобразовать
+            param0 = rs.getInt(columnName0);
             System.out.println(param0 + " | " + param1 + " | " + param2 + " | " + param3 + " | " + param4 + " | " + param5 + " | " + param6);
         }
     }
@@ -297,13 +293,12 @@ public class JDBCRunner {
         Timestamp param3, param4;
         String param2, param5, param6, param9, param10, param11;
 
-        Statement statement = connection.createStatement(); // создаем оператор для простого запроса (без параметров)
-        ResultSet rs = statement.executeQuery("SELECT * FROM ticket;"); // выполняем запрос на поиск и получаем список ответов
+        Statement statement = connection.createStatement();
+        ResultSet rs = statement.executeQuery("SELECT * FROM ticket;");
 
-        // Выводим заголовок столбцов
         System.out.println(columnName0 + " | " + columnName1 + " | " + columnName2 + " | " + columnName3 + " | " + columnName4 + " | " + columnName5 + " | " + columnName6 + " | " + columnName7 + " | " + columnName8 + " | " + columnName9 + " | " + columnName10 + " | " + columnName11);
 
-        while (rs.next()) { // пока есть данные, продвигаться по ним
+        while (rs.next()) {
             param0 = rs.getInt(columnName0);
             param1 = rs.getInt(columnName1);
             param2 = rs.getString(columnName2);
@@ -322,35 +317,30 @@ public class JDBCRunner {
     }
 
     private static void getClientNamed(Connection connection, String firstName) throws SQLException {
-        if (firstName == null || firstName.isBlank()) return; // проверка "на дурака"
+        if (firstName == null || firstName.isBlank()) return;
 
         long time = System.currentTimeMillis();
-        PreparedStatement statement = connection.prepareStatement(
-                "SELECT id, full_name, passport_series, birth_date " +
-                        "FROM client " +
-                        "WHERE full_name LIKE ?");
+        PreparedStatement statement = connection.prepareStatement("SELECT id, full_name, passport_series, birth_date " + "FROM client " + "WHERE full_name LIKE ?");
         statement.setString(1, firstName + "%");
 
         ResultSet rs = statement.executeQuery();
 
-        while (rs.next()) {  // пока есть данные перебираем их и выводим
+        while (rs.next()) {
             System.out.println(rs.getInt(1) + " | " + rs.getString(2) + " | " + rs.getInt(3) + " | " + rs.getString(4));
         }
         System.out.println("SELECT with WHERE (" + (System.currentTimeMillis() - time) + " мс.)");
     }
 
     private static void getClientTickets(Connection connection, String full_name) throws SQLException {
-        if (full_name == null || full_name.isBlank()) return; // проверка "на дурака"
-        full_name = '%' + full_name + '%'; // переданное значение может быть дополнено сначала и в конце (часть слова)
+        if (full_name == null || full_name.isBlank()) return;
+        full_name = '%' + full_name + '%';
 
         long time = System.currentTimeMillis();
-        PreparedStatement statement = connection.prepareStatement("SELECT client.full_name, ticket.id, seat.seat " + "FROM client " + "JOIN ticket ON client.id = ticket.client_id " + // Соединяем client и booking_tickets по client.id
-                "JOIN seat ON seat.ticket_number_id = ticket.id " + // Соединяем seat и booking_tickets по booking_number_id
-                "WHERE client.full_name LIKE ?;"); // создаем оператор шаблонного-запроса с "включаемыми" параметрами
-        statement.setString(1, full_name); // "безопасное" добавление параметров в запрос; с учетом их типа и порядка (индексация с 1)
-        ResultSet rs = statement.executeQuery(); // выполняем запрос на поиск и получаем список ответов
+        PreparedStatement statement = connection.prepareStatement("SELECT client.full_name, ticket.id, seat.seat " + "FROM client " + "JOIN ticket ON client.id = ticket.client_id " + "JOIN seat ON seat.ticket_number_id = ticket.id " + "WHERE client.full_name LIKE ?;");
+        statement.setString(1, full_name);
+        ResultSet rs = statement.executeQuery();
 
-        while (rs.next()) { // пока есть данные, перебираем их и выводим
+        while (rs.next()) {
             System.out.println(rs.getString(1) + " | " + rs.getString(2) + " | " + rs.getString(3));
         }
         System.out.println("SELECT with WHERE (" + (System.currentTimeMillis() - time) + " мс.)");
@@ -359,7 +349,7 @@ public class JDBCRunner {
     private static void getFlightsForPeriod(Connection connection, Timestamp departure_time_start, Timestamp departure_time_finish) throws SQLException {
         if (departure_time_start == null || departure_time_finish == null || departure_time_finish.before(departure_time_start))
             return;
-        PreparedStatement statement = connection.prepareStatement("SELECT flight FROM ticket WHERE departure_time BETWEEN ? AND ?");
+        PreparedStatement statement = connection.prepareStatement("SELECT flight FROM ticket WHERE " + "departure_time BETWEEN ? AND ?");
         statement.setTimestamp(1, departure_time_start);
         statement.setTimestamp(2, departure_time_finish);
         ResultSet rs = statement.executeQuery();
@@ -374,7 +364,7 @@ public class JDBCRunner {
 
     private static void getFlightsFromAirport(Connection connection, String airport) throws SQLException {
         if (!airport.matches("[A-Z]{3}") || airport.isBlank()) return;
-        PreparedStatement statement = connection.prepareStatement("SELECT flight FROM ticket WHERE departure_airport = ?");
+        PreparedStatement statement = connection.prepareStatement("SELECT flight FROM ticket" + " WHERE departure_airport = ?");
         statement.setString(1, airport);
         ResultSet rs = statement.executeQuery();
         int cnt = 0;
